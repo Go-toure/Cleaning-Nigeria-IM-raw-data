@@ -18,9 +18,14 @@ out_file <- "C:/Users/TOURE/Mes documents/REPOSITORIES/IM_raw_data/IM_level/NIE_
 # 1) READ RAW DATA
 # ============================================================
 AB <- qread(rds_file) |>
-  mutate(Country = "NIE") |> 
+  mutate(
+    Country = "NIE",
+    states = trimws(as.character(states)),
+    states = na_if(states, ""),
+    states = na_if(states, "NA"),
+    states = na_if(states, "null")
+  ) |>
   filter(!is.na(states))
-
 # ============================================================
 # 2) HELPERS
 # ============================================================
