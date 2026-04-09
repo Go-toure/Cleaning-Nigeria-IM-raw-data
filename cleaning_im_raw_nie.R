@@ -10,33 +10,6 @@ library(data.table)
 
 dt <- as.data.table(data)
 
-cols_with_absent <- names(dt)[
-  dt[, sapply(.SD, function(col) {
-    any(grepl("absent", col, ignore.case = TRUE), na.rm = TRUE)
-  })]
-]
-
-cols_with_absent
-
-for (col in cols_with_absent) {
-  cat("\n---", col, "---\n")
-  print(unique(data[[col]][grepl("absent", data[[col]], ignore.case = TRUE)]))
-}
-
-# #columns starting with Reason
-# reason_cols <- grep("^Reason", names(dt), value = TRUE, ignore.case = TRUE)
-# 
-# reason_cols
-noncomp_cols <- grep(
-  "non[[:space:]_\\-]*compliance",
-  names(dt),
-  value = TRUE,
-  ignore.case = TRUE
-)
-
-noncomp_cols
-
-
 # #columns starting with Reason
 reason_cols <- grep("^NOimmReas", names(dt), value = TRUE, ignore.case = TRUE)
 
