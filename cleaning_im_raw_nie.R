@@ -1,12 +1,12 @@
+
+library(data.table)
+library(stringr)
+library(qs)
 rds_file <- "C:/Users/TOURE/Documents/PADACORD/IM/7178.rds"
 
 file.info(rds_file)$size
-library(qs)
+
 data <- qread(rds_file)
-
-# Find columns containing "absent"
-
-library(data.table)
 
 dt <- as.data.table(data)
 
@@ -32,9 +32,6 @@ clean_values <- clean_values[nchar(clean_values) > 2]
 clean_values
 
 #classification
-
-library(data.table)
-library(stringr)
 
 # ============================================================
 # 1) Normalize raw free-text reason
