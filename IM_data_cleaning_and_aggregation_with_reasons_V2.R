@@ -1,8 +1,12 @@
 # ============================================================
 # NIGERIA IM REPOSITORY BUILDER - FAST LONG/WIDE VERSION
-# Updated to include:
-#   r_house_not_revisited
-#   detailed other_r explanations from NOimmReas_*_other
+# Final version with:
+#   - r_house_not_revisited
+#   - main standardized reasons
+#   - detailed absence reasons
+#   - detailed non-compliance reasons
+#   - standardized detailed OTHER reasons
+#   - raw widened other_r_detail_* text buckets
 # ============================================================
 
 library(tidyverse)
@@ -26,9 +30,13 @@ AB <- qread(rds_file) |>
     states = trimws(as.character(states)),
     states = na_if(states, ""),
     states = na_if(states, "NA"),
-    states = na_if(states, "null")
+    states = na_if(states, "null"),
+    lgas   = trimws(as.character(lgas)),
+    lgas   = na_if(lgas, ""),
+    lgas   = na_if(lgas, "NA"),
+    lgas   = na_if(lgas, "null")
   ) |>
-  filter(!is.na(states))
+  filter(!is.na(states), !is.na(lgas))
 
 # ============================================================
 # 2) HELPERS
@@ -52,6 +60,9 @@ make_reason_slug <- function(x) {
     stringr::str_to_lower()
 }
 
+# ------------------------------------------------------------
+# Main standardized reason
+# ------------------------------------------------------------
 detect_main_reason <- function(x) {
   x0 <- normalize_reason_text(x)
   
@@ -70,13 +81,13 @@ detect_main_reason <- function(x) {
     # vaccinated but not finger marked
     str_detect(
       x0,
-      "finger mark|finger marked|finger marking|not finger marked|no mark on left finger|fingers not mark|mark was seen|mark was not seen|cleaned off|wrongly finger marked|vaccinated but was not marked|immunized but no mark|vaccinated but no mark|finger marking erased|finger marking has cleaned off|child was immunized|the child was immunized|immunized at different occasions|passed the immunization|received routine opv|received vaccine last month"
+      "finger mark|finger marked|finger marking|not finger marked|no mark on left finger|fingers not mark|mark was seen|mark was not seen|cleaned off|wrongly finger marked|vaccinated but was not marked|immunized but no mark|vaccinated but no mark|finger marking erased|finger marking has cleaned off|the parent said the child was immunized but the finger was not marked|the child was immunized|child was vaccinated but was not marked|received routine opv recently|received vaccine last month"
     ) ~ "r_vaccinated_but_not_FM",
     
     # house not revisited
     str_detect(
       x0,
-      "not revisited|never revisited|no revisit|no revisitation|not come back|did not come back|didn t come back|team did not come back|team didn t come back|no follow up|no follow up visit|missed but not revisited|revisit not done|team wrote revisit but never revisited|team wrote revisited but never revisited|household not revisited"
+      "not revisited|never revisited|no revisit|no revisitation|not come back|did not come back|didn t come back|team did not come back|team didn t come back|no follow up|no follow up visit|missed but not revisited|revisit not done|team wrote revisit but never revisited|team wrote revisited but never revisited|household not revisited|child hasnt been revisit|reviste|rivist"
     ) ~ "r_house_not_revisited",
     
     # house not visited
@@ -97,7 +108,7 @@ detect_main_reason <- function(x) {
       "\\bvisitor\\b|\\bvisitors\\b|came for visiting|came for a visit|came visiting|came on visit|visiting child|visiting parent|just arrived|just came|just came back|moved in|from outside the settlement|from another state|from other state|not from the settlement|came for holiday|just came for holiday|holiday|sallah festival|omugwo|from village|from ibadan|from kano|from lagos|visit child from other lga|newly located|packed in|visitor from village|came from ibadan|came from kano|came from lagos|from nassarawa state|child just came visiting|child was visiting from another state|he is a visitor|the child is a visitor|he s on a visit to the house"
     ) ~ "r_child_is_a_visitor",
     
-    # non compliance
+    # non-compliance
     str_detect(
       x0,
       "non compliance|noncompliance|refusal|refused|rejection|does not want|do not allow|did not allow|father refused|father did not allow|father do not allow|mother requested not to give|not intrested|not interested|religious|traditional|cultural|no felt need|polio can be cured|polio has been eradicated|too many rounds|too many round|too many rnd|no caregiver consent|no care giver consent|no parental consent|caregiver refusal|scared|afraid|vaccine.*safe|vaccines.*safe|negative way|not been educated|ignorance|the say no|religious beliefs|announcement from mosque"
@@ -113,6 +124,9 @@ detect_main_reason <- function(x) {
   )
 }
 
+# ------------------------------------------------------------
+# Detailed absence reason
+# ------------------------------------------------------------
 detect_abs_reason <- function(x) {
   x0 <- normalize_reason_text(x)
   
@@ -127,6 +141,9 @@ detect_abs_reason <- function(x) {
   )
 }
 
+# ------------------------------------------------------------
+# Detailed non-compliance reason
+# ------------------------------------------------------------
 detect_nc_reason <- function(x) {
   x0 <- normalize_reason_text(x)
   
@@ -145,6 +162,40 @@ detect_nc_reason <- function(x) {
   )
 }
 
+# ------------------------------------------------------------
+# Detailed OTHER reason classification
+# ------------------------------------------------------------
+detect_other_reason <- function(x) {
+  x0 <- normalize_reason_text(x)
+  
+  case_when(
+    is.na(x0) | x0 == "" ~ NA_character_,
+    
+    # data / info quality
+    str_detect(x0, "false information|wrong information|reason not givin|reason not givend|reason not mention|not mention|not specified|no idea|lack of idea|no reason|no other reason|no other|none|nil|nill|forms|form") ~ "other_reason_data_issue",
+    
+    # eligibility / age / no eligible child
+    str_detect(x0, "above 5 years|morethan 5years|more than 5years|more than 5 years|not eligible|old enough to be immunized|no child|the team assume he is above 5 years|more than 5years and still they refuse to vaccinate him") ~ "other_reason_not_eligible",
+    
+    # supply / logistics
+    str_detect(x0, "not enough vaccine|vaccine finished|shortage of vaccines|vaccine got finished|no vaccine|lake of pluss|lack of plus|net not issued|net issue|was not given net during distribution|enough dose") ~ "other_reason_supply_issue",
+    
+    # already vaccinated / RI / vaccinated elsewhere
+    str_detect(x0, "received routine opv recently|received vaccine last month|receive it during ri|immunized|the child was immunized|child was immunized|lmmunized by house to house team|passed the immunization|immunized at different occasions|mother insisted she would immunize the child at their family clinic|community health center") ~ "other_reason_already_vaccinated",
+    
+    # team recording / marking / callback / enumeration issue
+    str_detect(x0, "marked there non eligible|mark completed|recalled by the im|the team was calling by the mother but they don t answer|did not meet the workers at their home|there was revisit on the wall|correctly stated on the wall as a revisit household") ~ "other_reason_team_recording_issue",
+    
+    # special condition
+    str_detect(x0, "paralyzed child|mental disorder|alcohol") ~ "other_reason_special_condition",
+    
+    TRUE ~ "other_reason_misc"
+  )
+}
+
+# ------------------------------------------------------------
+# Generic wide builders
+# ------------------------------------------------------------
 build_reason_wide_std <- function(data, reason_col, names_prefix = "") {
   data %>%
     filter(!is.na(.data[[reason_col]]), .data[[reason_col]] != "") %>%
@@ -174,7 +225,7 @@ build_other_reason_wide <- function(data, reason_col = "other_reason_detail", na
 # 3) BASE REPOSITORY PREP
 # ============================================================
 AC <- AB |>
-  filter(!is.na(today), !is.na(states)) |>
+  filter(!is.na(today), !is.na(states), !is.na(lgas)) |>
   mutate(
     today = as.Date(today),
     DateMonitor = as.Date(DateMonitor),
@@ -391,10 +442,7 @@ reason_long <- reason_long_main |>
     by = c("row_id___", "reason_source_col")
   ) |>
   mutate(
-    # use the coded/base reason for main classification
     reason_for_main = reason_raw,
-    
-    # keep paired _other text as separate detail source
     other_reason_detail_raw = reason_other_raw
   ) |>
   filter(!is.na(reason_for_main), reason_for_main != "")
@@ -410,16 +458,21 @@ reason_long <- reason_long |>
     other_reason_detail = case_when(
       main_reason == "other_r" & !is.na(other_reason_detail_raw) & other_reason_detail_raw != "" ~ other_reason_detail_raw,
       TRUE ~ NA_character_
+    ),
+    other_reason_class = case_when(
+      main_reason == "other_r" & !is.na(other_reason_detail) & other_reason_detail != "" ~ detect_other_reason(other_reason_detail),
+      TRUE ~ NA_character_
     )
   )
 
 # ============================================================
 # 6) BUILD WIDE TABLES OF STANDARDIZED REASONS
 # ============================================================
-main_reason_wide  <- build_reason_wide_std(reason_long, "main_reason")
-abs_reason_wide   <- build_reason_wide_std(reason_long, "abs_reason")
-nc_reason_wide    <- build_reason_wide_std(reason_long, "nc_reason")
-other_reason_wide <- build_other_reason_wide(reason_long, "other_reason_detail", "other_r_detail_")
+main_reason_wide       <- build_reason_wide_std(reason_long, "main_reason")
+abs_reason_wide        <- build_reason_wide_std(reason_long, "abs_reason")
+nc_reason_wide         <- build_reason_wide_std(reason_long, "nc_reason")
+other_reason_class_wide <- build_reason_wide_std(reason_long, "other_reason_class")
+other_reason_detail_wide <- build_other_reason_wide(reason_long, "other_reason_detail", "other_r_detail_")
 
 main_reason_vars <- c(
   "r_childabsent",
@@ -456,9 +509,20 @@ nc_reason_vars <- c(
   "nc_reason_nopvconcern"
 )
 
+other_reason_vars <- c(
+  "other_reason_data_issue",
+  "other_reason_not_eligible",
+  "other_reason_supply_issue",
+  "other_reason_already_vaccinated",
+  "other_reason_team_recording_issue",
+  "other_reason_special_condition",
+  "other_reason_misc"
+)
+
 for (v in setdiff(main_reason_vars, names(main_reason_wide))) main_reason_wide[[v]] <- 0L
-for (v in setdiff(abs_reason_vars, names(abs_reason_wide)))   abs_reason_wide[[v]]  <- 0L
-for (v in setdiff(nc_reason_vars, names(nc_reason_wide)))     nc_reason_wide[[v]]   <- 0L
+for (v in setdiff(abs_reason_vars, names(abs_reason_wide))) abs_reason_wide[[v]] <- 0L
+for (v in setdiff(nc_reason_vars, names(nc_reason_wide))) nc_reason_wide[[v]] <- 0L
+for (v in setdiff(other_reason_vars, names(other_reason_class_wide))) other_reason_class_wide[[v]] <- 0L
 
 # ============================================================
 # 7) BASE REPOSITORY AGGREGATION
@@ -500,11 +564,16 @@ AK <- AK_base |>
     by = c("Country", "Region", "District", "Response", "roundNumber", "Vaccine.type")
   ) |>
   left_join(
-    other_reason_wide,
+    other_reason_class_wide |>
+      select(Country, Region, District, Response, roundNumber, Vaccine.type, all_of(other_reason_vars)),
+    by = c("Country", "Region", "District", "Response", "roundNumber", "Vaccine.type")
+  ) |>
+  left_join(
+    other_reason_detail_wide,
     by = c("Country", "Region", "District", "Response", "roundNumber", "Vaccine.type")
   ) |>
   mutate(
-    across(all_of(c(main_reason_vars, abs_reason_vars, nc_reason_vars)), ~ replace_na(., 0L)),
+    across(all_of(c(main_reason_vars, abs_reason_vars, nc_reason_vars, other_reason_vars)), ~ replace_na(., 0L)),
     across(starts_with("other_r_detail_"), ~ replace_na(., 0L)),
     total_main_reasons =
       r_childabsent +
@@ -531,9 +600,12 @@ print(colSums(AK |> select(all_of(abs_reason_vars)) |> as.data.frame(), na.rm = 
 cat("\nNon-compliance reason totals:\n")
 print(colSums(AK |> select(all_of(nc_reason_vars)) |> as.data.frame(), na.rm = TRUE))
 
+cat("\nStandardized Other reason totals:\n")
+print(colSums(AK |> select(all_of(other_reason_vars)) |> as.data.frame(), na.rm = TRUE))
+
 other_detail_cols <- names(AK)[startsWith(names(AK), "other_r_detail_")]
 if (length(other_detail_cols) > 0) {
-  cat("\nOther detailed reason totals:\n")
+  cat("\nRaw Other detail totals:\n")
   print(colSums(AK[, other_detail_cols, drop = FALSE], na.rm = TRUE))
 }
 
