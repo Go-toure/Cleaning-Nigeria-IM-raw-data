@@ -1,11 +1,13 @@
 # ============================================================
 # NIGERIA IM REPOSITORY BUILDER - FAST LONG/WIDE VERSION
-# Final version:
-#   - main standardized reasons
-#   - detailed absence reasons
-#   - detailed non-compliance reasons
-#   - detailed standardized other reasons
-#   - optional reason review export for QA
+# Final corrected version:
+#   - classify MAIN reason from the best available text
+#     (reason_other_raw when available, otherwise reason_raw)
+#   - mutually exclusive detailed classification:
+#       * abs_reason_* only for r_childabsent
+#       * nc_reason_* only for r_non_compliance
+#       * other_reason_* only for other_r
+#   - optional QA export
 # ============================================================
 
 library(tidyverse)
@@ -61,43 +63,52 @@ detect_main_reason <- function(x) {
   case_when(
     is.na(x0) | x0 == "" ~ NA_character_,
     
+    # child not born / newborn
     str_detect(
       x0,
       "\\bnew born\\b|\\bnewborn\\b|\\bnew birth\\b|\\bnewly born\\b|\\ba day child\\b|\\ba day old\\b|\\bthree days old\\b|\\bjust gave birth\\b|\\bgiven birth\\b|\\bwas born yesterday\\b|\\bchild was born yesterday\\b|\\bdelivered on\\b|\\bbaby has four days\\b|\\bbaby was just born\\b|\\bzero dose\\b|\\bnew born baby\\b|\\bnew born babies\\b|\\bnew born child\\b|\\bnew born bby\\b"
     ) ~ "r_childnotborn",
     
+    # security
     str_detect(x0, "\\bsecurity\\b|security related issues") ~ "r_security",
     
+    # vaccinated but not finger marked
     str_detect(
       x0,
       "finger mark|finger marked|finger marking|not finger marked|no mark on left finger|fingers not mark|mark was seen|mark was not seen|cleaned off|wrongly finger marked|vaccinated but was not marked|immunized but no mark|vaccinated but no mark|finger marking erased|finger marking has cleaned off|the parent said the child was immunized but the finger was not marked|the child was immunized|child was vaccinated but was not marked|received routine opv recently|received vaccine last month"
     ) ~ "r_vaccinated_but_not_FM",
     
+    # house not revisited
     str_detect(
       x0,
       "not revisited|never revisited|no revisit|no revisitation|not come back|did not come back|didn t come back|team did not come back|team didn t come back|no follow up|no follow up visit|missed but not revisited|revisit not done|team wrote revisit but never revisited|team wrote revisited but never revisited|household not revisited|child hasnt been revisit|reviste|rivist"
     ) ~ "r_house_not_revisited",
     
+    # house not visited
     str_detect(
       x0,
       "team not visited|team not visit|team did not visit|team didn t visit|household not visited|household not visit|house was not visit|house not visited|team omitted|did not make effort|didn t make effort|team failed to check|questions were not asked|didn t ask|did not ask|team didn t see the children|team didn t immunise|team didn t immunize|team visited but.*not.*effort|team got to the house but.*not.*effort|missed by the team|team do not ask five key question|teams unable to ask questions|team didn t reached out|team failed to check for children|house was not visit by the team"
     ) ~ "r_house_not_visited",
     
+    # asleep
     str_detect(
       x0,
       "\\basleep\\b|\\bsleeping\\b|\\bwas sleeping\\b|\\bchild sleeping\\b|\\bchild was sleep\\b|\\bchild was asleep\\b|\\bwas slept\\b|\\bat sleep\\b|\\bchild was sleeping\\b|\\bchild is sleeping\\b|\\bshe was sleeping\\b|\\bmother was sleeping\\b"
     ) ~ "r_child_was_asleep",
     
+    # visitor
     str_detect(
       x0,
       "\\bvisitor\\b|\\bvisitors\\b|came for visiting|came for a visit|came visiting|came on visit|visiting child|visiting parent|just arrived|just came|just came back|moved in|from outside the settlement|from another state|from other state|not from the settlement|came for holiday|just came for holiday|holiday|sallah festival|omugwo|from village|from ibadan|from kano|from lagos|visit child from other lga|newly located|packed in|visitor from village|came from ibadan|came from kano|came from lagos|from nassarawa state|child just came visiting|child was visiting from another state|he is a visitor|the child is a visitor|he s on a visit to the house"
     ) ~ "r_child_is_a_visitor",
     
+    # non-compliance
     str_detect(
       x0,
       "non compliance|noncompliance|refusal|refused|rejection|does not want|do not allow|did not allow|father refused|father did not allow|father do not allow|mother requested not to give|not intrested|not interested|religious|traditional|cultural|no felt need|polio can be cured|polio has been eradicated|too many rounds|too many round|too many rnd|no caregiver consent|no care giver consent|no parental consent|caregiver refusal|scared|afraid|vaccine.*safe|vaccines.*safe|negative way|not been educated|ignorance|the say no|religious beliefs|announcement from mosque"
     ) ~ "r_non_compliance",
     
+    # child absent
     str_detect(
       x0,
       "absent|abcent|absant|absend|abcend|abset|absence|absences|not around|not arround|not arrnd|not a round|not arond|not sround|not araun|not home|not at home|not as home|note at home|no at home|not present|not found at home|not in the house|not in house|not in area|not available|not seen|not met|wasn t present|wasnt present|wasn t around|wasnt around|wasn t home|wasnt home|away during|away with|went out|out of house|market|farm|school|shool|sch|islamiya|modiraza|qur an school|play ground|playground|playing ground|play graunt|play grouwn|play groud|play grand|social event|social events|socialevert|socialevent|social evert|social getthering|event center|church|travel|travelled|travelling|traveling|journey|transit|errand|river|work|office|wedding|ceremony|burial|meeting"
@@ -345,6 +356,9 @@ AE <- AD |>
 
 # ============================================================
 # 4) FAST LONG REASON TABLE
+# Main fix:
+# classify using the BEST available text:
+#   reason_other_raw when available, otherwise reason_raw
 # ============================================================
 reason_cols_main  <- grep("^NOimmReas_Child.*(?<!_other)$", names(AE), value = TRUE, perl = TRUE)
 reason_cols_other <- grep("^NOimmReas_Child.*_other$", names(AE), value = TRUE)
@@ -387,7 +401,10 @@ reason_long <- reason_long_main |>
     by = c("row_id___", "reason_source_col")
   ) |>
   mutate(
-    reason_for_main = reason_raw,
+    reason_for_main = case_when(
+      !is.na(reason_other_raw) & reason_other_raw != "" ~ reason_other_raw,
+      TRUE ~ reason_raw
+    ),
     other_reason_source = case_when(
       !is.na(reason_other_raw) & reason_other_raw != "" ~ reason_other_raw,
       TRUE ~ reason_raw
@@ -415,7 +432,7 @@ reason_long <- reason_long |>
     )
   )
 
-# optional QA table
+# optional QA export
 if (export_reason_review) {
   reason_review <- reason_long |>
     count(
@@ -568,6 +585,12 @@ print(
     filter(total_main_reasons > missed_child) |>
     select(Country, Region, District, Response, roundNumber, missed_child, total_main_reasons) |>
     head(20)
+)
+
+cat("\nDistribution of main reasons at reason-entry level:\n")
+print(
+  reason_long |>
+    count(main_reason, sort = TRUE)
 )
 
 # ============================================================
