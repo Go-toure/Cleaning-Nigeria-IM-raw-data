@@ -120,6 +120,7 @@ detect_nc_reason <- function(x) {
   )
 }
 
+
 # ============================================================
 # 3) BASE REPOSITORY PREP
 # ============================================================
@@ -153,6 +154,7 @@ AD <- AC |>
     u5_present = u5_FM + missed_child,
     month = month(date, label = TRUE, abbr = TRUE)
   )
+
 
 AD$vactype_other[AD$vactype_other == "b0pv"] <- "bOPV"
 AD$vactype_other[AD$vactype_other == "cmopv2"] <- "mOPV"
@@ -297,6 +299,7 @@ AE <- AD |>
     )
   )
 
+
 # ============================================================
 # 4) FAST LONG REASON TABLE
 # ============================================================
@@ -357,6 +360,7 @@ reason_long <- reason_long |>
     abs_reason = if_else(main_reason == "r_childabsent", detect_abs_reason(reason_final), NA_character_),
     nc_reason  = if_else(main_reason == "r_non_compliance", detect_nc_reason(reason_final), NA_character_)
   )
+
 
 # ============================================================
 # 6) BUILD WIDE TABLES OF STANDARDIZED REASONS
@@ -444,6 +448,8 @@ AK <- AK_base |>
       r_child_was_asleep + r_child_is_a_visitor + r_non_compliance +
       r_childnotborn + r_security + other_r
   )
+
+
 
 # ============================================================
 # 9) QC

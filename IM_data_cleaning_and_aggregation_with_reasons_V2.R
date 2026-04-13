@@ -1,12 +1,12 @@
 # ============================================================
 # NIGERIA IM REPOSITORY BUILDER - FAST LONG/WIDE VERSION
-# Final version with:
-#   - r_house_not_revisited
-#   - main standardized reasons
-#   - detailed absence reasons
-#   - detailed non-compliance reasons
-#   - standardized detailed OTHER reasons
-#   - raw widened other_r_detail_* text buckets
+# Final version with mutually exclusive detailed classification:
+#   - one main_reason per reason entry
+#   - one detailed reason only:
+#       * abs_reason_* for r_childabsent
+#       * nc_reason_* for r_non_compliance
+#       * other_reason_* for other_r
+#   - raw other_r_detail_* retained for audit/review
 # ============================================================
 
 library(tidyverse)
@@ -164,6 +164,7 @@ detect_nc_reason <- function(x) {
 
 # ------------------------------------------------------------
 # Detailed OTHER reason classification
+# Only used when main_reason == other_r
 # ------------------------------------------------------------
 detect_other_reason <- function(x) {
   x0 <- normalize_reason_text(x)
@@ -171,22 +172,22 @@ detect_other_reason <- function(x) {
   case_when(
     is.na(x0) | x0 == "" ~ NA_character_,
     
-    # data / info quality
-    str_detect(x0, "false information|wrong information|reason not givin|reason not givend|reason not mention|not mention|not specified|no idea|lack of idea|no reason|no other reason|no other|none|nil|nill|forms|form") ~ "other_reason_data_issue",
+    # data quality / unclear / unusable text
+    str_detect(x0, "false information|wrong information|reason not givin|reason not givend|reason not mention|not mention|not specified|no idea|lack of idea|no reason|no other reason|no other|none|nil|nill|forms|form|other|others") ~ "other_reason_data_issue",
     
-    # eligibility / age / no eligible child
-    str_detect(x0, "above 5 years|morethan 5years|more than 5years|more than 5 years|not eligible|old enough to be immunized|no child|the team assume he is above 5 years|more than 5years and still they refuse to vaccinate him") ~ "other_reason_not_eligible",
+    # age / eligibility
+    str_detect(x0, "above 5 years|morethan 5years|more than 5years|more than 5 years|not eligible|old enough to be immunized|no child") ~ "other_reason_not_eligible",
     
-    # supply / logistics
+    # logistics / supplies / commodities
     str_detect(x0, "not enough vaccine|vaccine finished|shortage of vaccines|vaccine got finished|no vaccine|lake of pluss|lack of plus|net not issued|net issue|was not given net during distribution|enough dose") ~ "other_reason_supply_issue",
     
     # already vaccinated / RI / vaccinated elsewhere
-    str_detect(x0, "received routine opv recently|received vaccine last month|receive it during ri|immunized|the child was immunized|child was immunized|lmmunized by house to house team|passed the immunization|immunized at different occasions|mother insisted she would immunize the child at their family clinic|community health center") ~ "other_reason_already_vaccinated",
+    str_detect(x0, "the child was immunized|child was immunized|immunized|lmmunized by house to house team|passed the immunization|immunized at different occasions|received routine opv recently|received vaccine last month|receive it during ri|community health center|family clinic") ~ "other_reason_already_vaccinated",
     
-    # team recording / marking / callback / enumeration issue
-    str_detect(x0, "marked there non eligible|mark completed|recalled by the im|the team was calling by the mother but they don t answer|did not meet the workers at their home|there was revisit on the wall|correctly stated on the wall as a revisit household") ~ "other_reason_team_recording_issue",
+    # team recording / wall marking / callback / enumeration
+    str_detect(x0, "marked there non eligible|mark completed|recalled by the im|there was revisit on the wall|correctly stated on the wall as a revisit household|the team was calling by the mother but they don t answer|did not meet the workers at their home") ~ "other_reason_team_recording_issue",
     
-    # special condition
+    # special conditions
     str_detect(x0, "paralyzed child|mental disorder|alcohol") ~ "other_reason_special_condition",
     
     TRUE ~ "other_reason_misc"
@@ -442,25 +443,44 @@ reason_long <- reason_long_main |>
     by = c("row_id___", "reason_source_col")
   ) |>
   mutate(
+    # base reason for main classification
     reason_for_main = reason_raw,
-    other_reason_detail_raw = reason_other_raw
+    
+    # for detailed OTHER:
+    # if _other text exists, use it
+    # otherwise fall back to original reason text
+    other_reason_source = case_when(
+      !is.na(reason_other_raw) & reason_other_raw != "" ~ reason_other_raw,
+      TRUE ~ reason_raw
+    )
   ) |>
   filter(!is.na(reason_for_main), reason_for_main != "")
 
 # ============================================================
 # 5) CLASSIFY EACH CHILD REASON ONCE
+# MUTUALLY EXCLUSIVE detailed classification
 # ============================================================
 reason_long <- reason_long |>
   mutate(
     main_reason = detect_main_reason(reason_for_main),
-    abs_reason = if_else(main_reason == "r_childabsent", detect_abs_reason(reason_for_main), NA_character_),
-    nc_reason  = if_else(main_reason == "r_non_compliance", detect_nc_reason(reason_for_main), NA_character_),
-    other_reason_detail = case_when(
-      main_reason == "other_r" & !is.na(other_reason_detail_raw) & other_reason_detail_raw != "" ~ other_reason_detail_raw,
+    
+    abs_reason = case_when(
+      main_reason == "r_childabsent" ~ detect_abs_reason(reason_for_main),
       TRUE ~ NA_character_
     ),
+    
+    nc_reason = case_when(
+      main_reason == "r_non_compliance" ~ detect_nc_reason(reason_for_main),
+      TRUE ~ NA_character_
+    ),
+    
     other_reason_class = case_when(
-      main_reason == "other_r" & !is.na(other_reason_detail) & other_reason_detail != "" ~ detect_other_reason(other_reason_detail),
+      main_reason == "other_r" ~ detect_other_reason(other_reason_source),
+      TRUE ~ NA_character_
+    ),
+    
+    other_reason_detail = case_when(
+      main_reason == "other_r" ~ other_reason_source,
       TRUE ~ NA_character_
     )
   )
@@ -468,9 +488,9 @@ reason_long <- reason_long |>
 # ============================================================
 # 6) BUILD WIDE TABLES OF STANDARDIZED REASONS
 # ============================================================
-main_reason_wide       <- build_reason_wide_std(reason_long, "main_reason")
-abs_reason_wide        <- build_reason_wide_std(reason_long, "abs_reason")
-nc_reason_wide         <- build_reason_wide_std(reason_long, "nc_reason")
+main_reason_wide        <- build_reason_wide_std(reason_long, "main_reason")
+abs_reason_wide         <- build_reason_wide_std(reason_long, "abs_reason")
+nc_reason_wide          <- build_reason_wide_std(reason_long, "nc_reason")
 other_reason_class_wide <- build_reason_wide_std(reason_long, "other_reason_class")
 other_reason_detail_wide <- build_other_reason_wide(reason_long, "other_reason_detail", "other_r_detail_")
 

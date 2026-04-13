@@ -10,7 +10,7 @@ data <- qread(rds_file)
 
 dt <- as.data.table(data)
 
-# #columns starting with Reason
+# #columns starting with Reason ^NOimmReas NOimmReas_*_other
 reason_cols <- grep("^NOimmReas", names(dt), value = TRUE, ignore.case = TRUE)
 
 reason_cols
@@ -23,6 +23,29 @@ all_values_clean <- unique(
 all_values_clean <- all_values_clean[!is.na(all_values_clean) & all_values_clean != ""]
 
 all_values_clean
+
+
+#other reasons
+# #columns starting with NOimmReas_ and ending with other
+reason_cols <- grep("^NOimmReas_.*other$", names(dt), value = TRUE, ignore.case = TRUE)
+
+reason_cols
+
+# distinct values
+all_values_clean <- unique(
+  trimws(tolower(unlist(dt[, ..reason_cols])))
+)
+
+all_values_clean <- all_values_clean[!is.na(all_values_clean) & all_values_clean != ""]
+
+all_values_clean
+
+
+
+
+
+
+
 
 
 #Clean step-by-step
