@@ -27,7 +27,7 @@ all_values_clean
 
 #other reasons
 # #columns starting with NOimmReas_ and ending with other
-reason_cols <- grep("^NOimmReas_.*other$", names(dt), value = TRUE, ignore.case = TRUE)
+reason_cols <- grep("source", names(dt), value = TRUE, ignore.case = TRUE)
 
 reason_cols
 

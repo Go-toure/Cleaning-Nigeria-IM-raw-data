@@ -1,6 +1,7 @@
 # ============================================================
 # NIGERIA IM REPOSITORY BUILDER - OPTIMIZED FAST VERSION
-# Reasons + Social Mobilization
+# Reasons + Correct Nigeria Social Mobilization Codebook
+# + SM Analytics Indicators
 # ============================================================
 
 suppressPackageStartupMessages({
@@ -30,7 +31,7 @@ setDT(AB)
 
 AB[, Country := "NIE"]
 AB[, states := trimws(as.character(states))]
-AB[states %in% c("", "NA", "null"), states := NA_character_]
+AB[states %in% c("", "NA", "null", "nan"), states := NA_character_]
 AB <- AB[!is.na(states)]
 
 cat("Read completed in:", round(difftime(Sys.time(), t0, units = "secs"), 1), "seconds\n")
@@ -55,42 +56,21 @@ detect_main_reason <- function(x) {
   dplyr::case_when(
     is.na(x0) | x0 == "" ~ NA_character_,
     
-    str_detect(
-      x0,
-      "\\bnew born\\b|\\bnewborn\\b|\\bnew birth\\b|\\bnewly born\\b|\\ba day child\\b|\\ba day old\\b|\\bthree days old\\b|\\bjust gave birth\\b|\\bgiven birth\\b|\\bwas born yesterday\\b|\\bchild was born yesterday\\b|\\bdelivered on\\b|\\bbaby has four days\\b|\\bbaby was just born\\b|\\bzero dose\\b|\\bnew born baby\\b|\\bnew born babies\\b|\\bnew born child\\b|\\bnew born bby\\b"
-    ) ~ "r_childnotborn",
+    str_detect(x0, "\\bnew born\\b|\\bnewborn\\b|\\bnew birth\\b|\\bnewly born\\b|\\ba day child\\b|\\ba day old\\b|\\bthree days old\\b|\\bjust gave birth\\b|\\bgiven birth\\b|\\bwas born yesterday\\b|\\bchild was born yesterday\\b|\\bdelivered on\\b|\\bbaby has four days\\b|\\bbaby was just born\\b|\\bzero dose\\b|\\bnew born baby\\b|\\bnew born babies\\b|\\bnew born child\\b|\\bnew born bby\\b") ~ "r_childnotborn",
     
     str_detect(x0, "\\bsecurity\\b|security related issues") ~ "r_security",
     
-    str_detect(
-      x0,
-      "finger mark|finger marked|finger marking|not finger marked|no mark on left finger|fingers not mark|mark was seen|mark was not seen|cleaned off|wrongly finger marked|vaccinated but was not marked|immunized but no mark|vaccinated but no mark|finger marking erased|finger marking has cleaned off|child was immunized|the child was immunized|immunized at different occasions|passed the immunization|received routine opv|received vaccine last month"
-    ) ~ "r_vaccinated_but_not_FM",
+    str_detect(x0, "finger mark|finger marked|finger marking|not finger marked|no mark on left finger|fingers not mark|mark was seen|mark was not seen|cleaned off|wrongly finger marked|vaccinated but was not marked|immunized but no mark|vaccinated but no mark|finger marking erased|finger marking has cleaned off|child was immunized|the child was immunized|immunized at different occasions|passed the immunization|received routine opv|received vaccine last month") ~ "r_vaccinated_but_not_FM",
     
-    str_detect(
-      x0,
-      "team not visited|team not visit|team did not visit|team didn t visit|household not visited|household not visit|house was not visit|house not visited|not revisited|never revisited|no revisit|revisit household|team omitted|did not make effort|didn t make effort|team failed to check|questions were not asked|didn t ask|did not ask|team didn t see the children|team didn t immunise|team didn t immunize|team visited but.*not.*effort|team got to the house but.*not.*effort|missed by the team|team do not ask five key question|teams unable to ask questions|team wrote revisit but never revisited|team wrote revisited but never revisited|team didn t reached out|team failed to check for children|house was not visit by the team"
-    ) ~ "r_house_not_visited",
+    str_detect(x0, "team not visited|team not visit|team did not visit|team didn t visit|household not visited|household not visit|house was not visit|house not visited|not revisited|never revisited|no revisit|revisit household|team omitted|did not make effort|didn t make effort|team failed to check|questions were not asked|didn t ask|did not ask|team didn t see the children|team didn t immunise|team didn t immunize|team visited but.*not.*effort|team got to the house but.*not.*effort|missed by the team|team do not ask five key question|teams unable to ask questions|team wrote revisit but never revisited|team wrote revisited but never revisited|team didn t reached out|team failed to check for children|house was not visit by the team") ~ "r_house_not_visited",
     
-    str_detect(
-      x0,
-      "\\basleep\\b|\\bsleeping\\b|\\bwas sleeping\\b|\\bchild sleeping\\b|\\bchild was sleep\\b|\\bchild was asleep\\b|\\bwas slept\\b|\\bat sleep\\b|\\bchild was sleeping\\b|\\bchild is sleeping\\b|\\bshe was sleeping\\b|\\bmother was sleeping\\b"
-    ) ~ "r_child_was_asleep",
+    str_detect(x0, "\\basleep\\b|\\bsleeping\\b|\\bwas sleeping\\b|\\bchild sleeping\\b|\\bchild was sleep\\b|\\bchild was asleep\\b|\\bwas slept\\b|\\bat sleep\\b|\\bchild was sleeping\\b|\\bchild is sleeping\\b|\\bshe was sleeping\\b|\\bmother was sleeping\\b") ~ "r_child_was_asleep",
     
-    str_detect(
-      x0,
-      "\\bvisitor\\b|\\bvisitors\\b|came for visiting|came for a visit|came visiting|came on visit|visiting child|visiting parent|just arrived|just came|just came back|moved in|from outside the settlement|from another state|from other state|not from the settlement|came for holiday|just came for holiday|holiday|sallah festival|omugwo|from village|from ibadan|from kano|from lagos|visit child from other lga|newly located|packed in|visitor from village|came from ibadan|came from kano|came from lagos|from nassarawa state|child just came visiting|child was visiting from another state|he is a visitor|the child is a visitor|he s on a visit to the house"
-    ) ~ "r_child_is_a_visitor",
+    str_detect(x0, "\\bvisitor\\b|\\bvisitors\\b|came for visiting|came for a visit|came visiting|came on visit|visiting child|visiting parent|just arrived|just came|just came back|moved in|from outside the settlement|from another state|from other state|not from the settlement|came for holiday|just came for holiday|holiday|sallah festival|omugwo|from village|from ibadan|from kano|from lagos|visit child from other lga|newly located|packed in|visitor from village|came from ibadan|came from kano|came from lagos|from nassarawa state|child just came visiting|child was visiting from another state|he is a visitor|the child is a visitor|he s on a visit to the house") ~ "r_child_is_a_visitor",
     
-    str_detect(
-      x0,
-      "non compliance|noncompliance|refusal|refused|rejection|does not want|do not allow|did not allow|father refused|father did not allow|father do not allow|mother requested not to give|not intrested|not interested|religious|traditional|cultural|no felt need|polio can be cured|polio has been eradicated|too many rounds|too many round|too many rnd|no caregiver consent|no care giver consent|no parental consent|caregiver refusal|scared|afraid|vaccine.*safe|vaccines.*safe|negative way|not been educated|ignorance|the say no|religious beliefs|announcement from mosque"
-    ) ~ "r_non_compliance",
+    str_detect(x0, "non compliance|noncompliance|refusal|refused|rejection|does not want|do not allow|did not allow|father refused|father did not allow|father do not allow|mother requested not to give|not intrested|not interested|religious|traditional|cultural|no felt need|polio can be cured|polio has been eradicated|too many rounds|too many round|too many rnd|no caregiver consent|no care giver consent|no parental consent|caregiver refusal|scared|afraid|vaccine.*safe|vaccines.*safe|negative way|not been educated|ignorance|the say no|religious beliefs|announcement from mosque") ~ "r_non_compliance",
     
-    str_detect(
-      x0,
-      "absent|abcent|absant|absend|abcend|abset|absence|absences|not around|not arround|not arrnd|not a round|not arond|not sround|not araun|not home|not at home|not as home|note at home|no at home|not present|not found at home|not in the house|not in house|not in area|not available|not seen|not met|wasn t present|wasnt present|wasn t around|wasnt around|wasn t home|wasnt home|away during|away with|went out|out of house|market|farm|school|shool|sch|islamiya|modiraza|qur an school|play ground|playground|playing ground|play graunt|play grouwn|play groud|play grand|social event|social events|socialevert|socialevent|social evert|social getthering|event center|church|travel|travelled|travelling|traveling|journey|transit|errand|river|work|office|wedding|ceremony|burial|meeting"
-    ) ~ "r_childabsent",
+    str_detect(x0, "absent|abcent|absant|absend|abcend|abset|absence|absences|not around|not arround|not arrnd|not a round|not arond|not sround|not araun|not home|not at home|not as home|note at home|no at home|not present|not found at home|not in the house|not in house|not in area|not available|not seen|not met|wasn t present|wasnt present|wasn t around|wasnt around|wasn t home|wasnt home|away during|away with|went out|out of house|market|farm|school|shool|sch|islamiya|modiraza|qur an school|play ground|playground|playing ground|play graunt|play grouwn|play groud|play grand|social event|social events|socialevert|socialevent|social evert|social getthering|event center|church|travel|travelled|travelling|traveling|journey|transit|errand|river|work|office|wedding|ceremony|burial|meeting") ~ "r_childabsent",
     
     TRUE ~ "other_r"
   )
@@ -128,34 +108,82 @@ detect_nc_reason <- function(x) {
   )
 }
 
+# ============================================================
+# 3) EXPECTED OUTPUT VARIABLES
+# ============================================================
+
 main_reason_vars <- c(
-  "r_childabsent", "r_house_not_visited", "r_vaccinated_but_not_FM",
-  "r_child_was_asleep", "r_child_is_a_visitor", "r_non_compliance",
-  "r_childnotborn", "r_security", "other_r"
+  "r_childabsent",
+  "r_house_not_visited",
+  "r_vaccinated_but_not_FM",
+  "r_child_was_asleep",
+  "r_child_is_a_visitor",
+  "r_non_compliance",
+  "r_childnotborn",
+  "r_security",
+  "other_r"
 )
 
 abs_reason_vars <- c(
-  "abs_reason_other", "abs_reason_travelled", "abs_reason_farm",
-  "abs_reason_market", "abs_reason_school", "abs_reason_in_playground"
+  "abs_reason_other",
+  "abs_reason_travelled",
+  "abs_reason_farm",
+  "abs_reason_market",
+  "abs_reason_school",
+  "abs_reason_in_playground"
 )
 
 nc_reason_vars <- c(
-  "nc_reason_no_felt_need", "nc_reason_child_sick",
-  "nc_reason_vaccines_safety", "nc_reason_religious_cultural",
-  "nc_reason_no_care_giver_consent", "nc_reason_poliofree",
-  "nc_reason_too_many_rnd", "nc_reason_others",
-  "nc_reason_covid_19", "nc_reason_nopvconcern"
+  "nc_reason_no_felt_need",
+  "nc_reason_child_sick",
+  "nc_reason_vaccines_safety",
+  "nc_reason_religious_cultural",
+  "nc_reason_no_care_giver_consent",
+  "nc_reason_poliofree",
+  "nc_reason_too_many_rnd",
+  "nc_reason_others",
+  "nc_reason_covid_19",
+  "nc_reason_nopvconcern"
+)
+
+# Correct Nigeria SourceInfo codebook
+sm_map_dt <- data.table(
+  sm_code = as.character(1:13),
+  sm_type = c(
+    "sm_traditional_leader",             # 1 Traditional Leader
+    "sm_town_announcer",                 # 2 Town Announcer
+    "sm_mosque_announcement",            # 3 Announcement from Mosque
+    "sm_radio",                          # 4 Radio
+    "sm_newspaper",                      # 5 Newspaper
+    "sm_poster_leaflets",                # 6 Poster/Leaflets
+    "sm_banner_hoarding",                # 7 Banner/Hoarding
+    "sm_relative_neighbour_friend",      # 8 Relative/Neighbour/friend
+    "sm_health_worker",                  # 9 Health Worker
+    "sm_vcm_unicef",                     # 10 VCM-UNICEF
+    "sm_school_children_rally_visit",    # 11 Rally or Visit by School children
+    "sm_not_aware",                      # 12 Not Aware
+    "sm_other"                           # 13 Other
+  )
+)
+
+sm_vars <- sm_map_dt$sm_type
+sm_aware_vars <- setdiff(sm_vars, "sm_not_aware")
+
+sm_indicator_vars <- c(
+  "sm_intensity_group",
+  "sm_non_compliance_pressure",
+  "sm_gap_flag",
+  "sm_priority_flag"
 )
 
 # ============================================================
-# 3) BASE REPOSITORY PREP
+# 4) BASE REPOSITORY PREP
 # ============================================================
 
 cat("\nPreparing base data...\n")
 t0 <- Sys.time()
 
 AC <- copy(AB)
-
 AC <- AC[!is.na(today) & !is.na(states)]
 
 AC[, today := as.Date(today)]
@@ -171,7 +199,12 @@ for (cc in c(imm_cols, unimm_cols)) {
 
 AC <- AC[year > 2019]
 
-setnames(AC, old = c("states", "lgas", "today"), new = c("Region", "District", "date"), skip_absent = TRUE)
+setnames(
+  AC,
+  old = c("states", "lgas", "today"),
+  new = c("Region", "District", "date"),
+  skip_absent = TRUE
+)
 
 AC[, u5_FM := rowSums(.SD, na.rm = TRUE), .SDcols = imm_cols]
 AC[, missed_child := rowSums(.SD, na.rm = TRUE), .SDcols = unimm_cols]
@@ -238,24 +271,28 @@ AC[str_detect(Response, "bOPV"), Vaccine.type := "bOPV"]
 AC[!(str_detect(Response, "nOPV") | str_detect(Response, "bOPV")), Vaccine.type := vactype]
 
 AE <- AC
-
 AE[, row_id___ := .I]
 
 cat("Base prep completed in:", round(difftime(Sys.time(), t0, units = "secs"), 1), "seconds\n")
 
 # ============================================================
-# 4) OPTIMIZED REASON LONG TABLE
+# 5) OPTIMIZED REASON LONG TABLE
 # ============================================================
 
 cat("\nProcessing missed-child reasons...\n")
 t0 <- Sys.time()
 
-reason_cols_main  <- grep("^NOimmReas_Child.*(?<!_other)$", names(AE), value = TRUE, perl = TRUE)
+reason_cols_main <- grep("^NOimmReas_Child.*(?<!_other)$", names(AE), value = TRUE, perl = TRUE)
 reason_cols_other <- grep("^NOimmReas_Child.*_other$", names(AE), value = TRUE)
 
 id_cols_reason <- c(
-  "row_id___", "Country", "Region", "District",
-  "Response", "roundNumber", "Vaccine.type"
+  "row_id___",
+  "Country",
+  "Region",
+  "District",
+  "Response",
+  "roundNumber",
+  "Vaccine.type"
 )
 
 reason_long_main <- melt(
@@ -302,7 +339,7 @@ cat("Reason long table rows:", nrow(reason_long), "\n")
 cat("Reason long processing completed in:", round(difftime(Sys.time(), t0, units = "secs"), 1), "seconds\n")
 
 # ============================================================
-# 5) CLASSIFY REASONS
+# 6) CLASSIFY REASONS
 # ============================================================
 
 cat("\nClassifying reasons...\n")
@@ -318,13 +355,20 @@ reason_long[main_reason == "r_non_compliance", nc_reason := detect_nc_reason(rea
 cat("Reason classification completed in:", round(difftime(Sys.time(), t0, units = "secs"), 1), "seconds\n")
 
 # ============================================================
-# 6) OPTIMIZED WIDE REASON TABLES
+# 7) WIDE REASON TABLES
 # ============================================================
 
 cat("\nBuilding reason wide tables...\n")
 t0 <- Sys.time()
 
-reason_group_cols <- c("Country", "Region", "District", "Response", "roundNumber", "Vaccine.type")
+reason_group_cols <- c(
+  "Country",
+  "Region",
+  "District",
+  "Response",
+  "roundNumber",
+  "Vaccine.type"
+)
 
 main_reason_wide <- dcast(
   reason_long[!is.na(main_reason) & main_reason != ""],
@@ -354,7 +398,7 @@ for (v in setdiff(nc_reason_vars, names(nc_reason_wide))) nc_reason_wide[, (v) :
 cat("Reason wide tables completed in:", round(difftime(Sys.time(), t0, units = "secs"), 1), "seconds\n")
 
 # ============================================================
-# 6B) OPTIMIZED SOCIAL MOBILIZATION
+# 8) SOCIAL MOBILIZATION - CORRECT NIGERIA CODEBOOK
 # ============================================================
 
 cat("\nProcessing social mobilization...\n")
@@ -362,32 +406,19 @@ t0 <- Sys.time()
 
 sm_cols <- grep("^SourceInfo_house", names(AE), value = TRUE, ignore.case = TRUE)
 
-sm_map_dt <- data.table(
-  sm_code = as.character(1:13),
-  sm_type = c(
-    "sm_radio",
-    "sm_tv",
-    "sm_health_worker",
-    "sm_community_leader",
-    "sm_religious_leader",
-    "sm_town_crier",
-    "sm_mobile_announcement",
-    "sm_house_to_house",
-    "sm_family_friends",
-    "sm_school",
-    "sm_market",
-    "sm_social_media",
-    "sm_other"
-  )
-)
-
-sm_vars <- sm_map_dt$sm_type
-
 if (length(sm_cols) > 0) {
   
   sm_long <- melt(
     AE,
-    id.vars = c("row_id___", "Country", "Region", "District", "Response", "roundNumber", "Vaccine.type"),
+    id.vars = c(
+      "row_id___",
+      "Country",
+      "Region",
+      "District",
+      "Response",
+      "roundNumber",
+      "Vaccine.type"
+    ),
     measure.vars = sm_cols,
     variable.name = "sm_col",
     value.name = "sm_raw",
@@ -401,11 +432,27 @@ if (length(sm_cols) > 0) {
   sm_long <- sm_long[
     ,
     .(sm_code = unlist(strsplit(sm_raw, "\\s+"))),
-    by = .(row_id___, Country, Region, District, Response, roundNumber, Vaccine.type, sm_col)
+    by = .(
+      row_id___,
+      Country,
+      Region,
+      District,
+      Response,
+      roundNumber,
+      Vaccine.type,
+      sm_col
+    )
   ]
   
   sm_long[, sm_code := trimws(sm_code)]
   sm_long <- sm_long[sm_code != ""]
+  
+  sm_unknown_codes <- setdiff(unique(sm_long$sm_code), sm_map_dt$sm_code)
+  
+  if (length(sm_unknown_codes) > 0) {
+    cat("\nWARNING: Unknown SourceInfo codes detected:\n")
+    print(sm_unknown_codes)
+  }
   
   sm_long <- merge(
     sm_long,
@@ -425,20 +472,29 @@ if (length(sm_cols) > 0) {
   for (v in setdiff(sm_vars, names(sm_wide))) sm_wide[, (v) := 0L]
   
   sm_wide[, sm_total_sources := rowSums(.SD, na.rm = TRUE), .SDcols = sm_vars]
+  sm_wide[, sm_total_awareness_sources := rowSums(.SD, na.rm = TRUE), .SDcols = sm_aware_vars]
   
 } else {
   
-  sm_wide <- unique(AE[, .(Country, Region, District, Response, roundNumber, Vaccine.type)])
+  sm_wide <- unique(AE[, .(
+    Country,
+    Region,
+    District,
+    Response,
+    roundNumber,
+    Vaccine.type
+  )])
   
   for (v in sm_vars) sm_wide[, (v) := 0L]
   
   sm_wide[, sm_total_sources := 0L]
+  sm_wide[, sm_total_awareness_sources := 0L]
 }
 
 cat("SM processing completed in:", round(difftime(Sys.time(), t0, units = "secs"), 1), "seconds\n")
 
 # ============================================================
-# 7) BASE REPOSITORY AGGREGATION
+# 9) BASE REPOSITORY AGGREGATION
 # ============================================================
 
 cat("\nAggregating base repository...\n")
@@ -453,16 +509,24 @@ AK_base <- AE[
     u5_FM = sum(u5_FM, na.rm = TRUE),
     missed_child = sum(missed_child, na.rm = TRUE)
   ),
-  by = .(Country, Region, District, Response, Vaccine.type, roundNumber)
+  by = .(
+    Country,
+    Region,
+    District,
+    Response,
+    Vaccine.type,
+    roundNumber
+  )
 ]
 
 AK_base[, year := lubridate::year(start_date)]
 AK_base[, cv := round(u5_FM / u5_present, 2)]
+AK_base[is.nan(cv) | is.infinite(cv), cv := NA_real_]
 
 cat("Base aggregation completed in:", round(difftime(Sys.time(), t0, units = "secs"), 1), "seconds\n")
 
 # ============================================================
-# 8) MERGE REASONS + SM INTO FINAL REPOSITORY
+# 10) MERGE FINAL REPOSITORY
 # ============================================================
 
 cat("\nMerging final repository...\n")
@@ -474,12 +538,47 @@ setkeyv(abs_reason_wide, reason_group_cols)
 setkeyv(nc_reason_wide, reason_group_cols)
 setkeyv(sm_wide, reason_group_cols)
 
-AK <- merge(AK_base, main_reason_wide[, c(reason_group_cols, main_reason_vars), with = FALSE], by = reason_group_cols, all.x = TRUE)
-AK <- merge(AK, abs_reason_wide[, c(reason_group_cols, abs_reason_vars), with = FALSE], by = reason_group_cols, all.x = TRUE)
-AK <- merge(AK, nc_reason_wide[, c(reason_group_cols, nc_reason_vars), with = FALSE], by = reason_group_cols, all.x = TRUE)
-AK <- merge(AK, sm_wide[, c(reason_group_cols, sm_vars, "sm_total_sources"), with = FALSE], by = reason_group_cols, all.x = TRUE)
+AK <- merge(
+  AK_base,
+  main_reason_wide[, c(reason_group_cols, main_reason_vars), with = FALSE],
+  by = reason_group_cols,
+  all.x = TRUE
+)
 
-count_cols <- c(main_reason_vars, abs_reason_vars, nc_reason_vars, sm_vars, "sm_total_sources")
+AK <- merge(
+  AK,
+  abs_reason_wide[, c(reason_group_cols, abs_reason_vars), with = FALSE],
+  by = reason_group_cols,
+  all.x = TRUE
+)
+
+AK <- merge(
+  AK,
+  nc_reason_wide[, c(reason_group_cols, nc_reason_vars), with = FALSE],
+  by = reason_group_cols,
+  all.x = TRUE
+)
+
+AK <- merge(
+  AK,
+  sm_wide[, c(
+    reason_group_cols,
+    sm_vars,
+    "sm_total_sources",
+    "sm_total_awareness_sources"
+  ), with = FALSE],
+  by = reason_group_cols,
+  all.x = TRUE
+)
+
+count_cols <- c(
+  main_reason_vars,
+  abs_reason_vars,
+  nc_reason_vars,
+  sm_vars,
+  "sm_total_sources",
+  "sm_total_awareness_sources"
+)
 
 for (cc in count_cols) {
   set(AK, i = which(is.na(AK[[cc]])), j = cc, value = 0L)
@@ -499,17 +598,93 @@ AK[
     other_r
 ]
 
+# ============================================================
+# 10B) SM ANALYTICS INDICATORS
+# ============================================================
+
+AK[
+  ,
+  sm_intensity_group := fifelse(
+    sm_total_awareness_sources == 0,
+    "No awareness source",
+    fifelse(
+      sm_total_awareness_sources == 1,
+      "One awareness source",
+      fifelse(
+        sm_total_awareness_sources <= 3,
+        "2-3 awareness sources",
+        "4+ awareness sources"
+      )
+    )
+  )
+]
+
+AK[
+  ,
+  sm_non_compliance_pressure := fifelse(
+    sm_total_awareness_sources == 0 & r_non_compliance > 0,
+    "Non-compliance with no awareness source",
+    fifelse(
+      sm_total_awareness_sources > 0 & r_non_compliance > 0,
+      "Non-compliance despite awareness",
+      fifelse(
+        sm_total_awareness_sources > 0 & r_non_compliance == 0,
+        "Awareness with no non-compliance",
+        "No SM / no non-compliance"
+      )
+    )
+  )
+]
+
+AK[
+  ,
+  sm_gap_flag := fifelse(
+    sm_total_awareness_sources == 0,
+    "SM gap detected",
+    "SM source recorded"
+  )
+]
+
+AK[
+  ,
+  sm_priority_flag := fifelse(
+    sm_total_awareness_sources == 0 & cv < 0.9,
+    "High priority SM gap",
+    fifelse(
+      r_non_compliance > 0 & sm_health_worker == 0 & sm_vcm_unicef == 0,
+      "Community resistance / weak technical source",
+      fifelse(
+        sm_not_aware > 0,
+        "Not aware reported",
+        "No major SM alert"
+      )
+    )
+  )
+]
+
 setcolorder(
   AK,
   c(
-    "Country", "Region", "District", "Response", "Vaccine.type", "roundNumber",
-    "start_date", "end_date", "year",
-    "u5_present", "u5_FM", "missed_child", "cv",
+    "Country",
+    "Region",
+    "District",
+    "Response",
+    "Vaccine.type",
+    "roundNumber",
+    "start_date",
+    "end_date",
+    "year",
+    "u5_present",
+    "u5_FM",
+    "missed_child",
+    "cv",
     main_reason_vars,
     abs_reason_vars,
     nc_reason_vars,
     sm_vars,
     "sm_total_sources",
+    "sm_total_awareness_sources",
+    sm_indicator_vars,
     "total_main_reasons"
   )
 )
@@ -517,7 +692,7 @@ setcolorder(
 cat("Final merge completed in:", round(difftime(Sys.time(), t0, units = "secs"), 1), "seconds\n")
 
 # ============================================================
-# 9) QC
+# 11) QC
 # ============================================================
 
 cat("\n================ QC SUMMARY ================\n")
@@ -534,11 +709,37 @@ print(colSums(as.data.frame(AK[, ..nc_reason_vars]), na.rm = TRUE))
 cat("\nSocial mobilization totals:\n")
 print(colSums(as.data.frame(AK[, ..sm_vars]), na.rm = TRUE))
 
+cat("\nSM total sources:\n")
+print(sum(AK$sm_total_sources, na.rm = TRUE))
+
+cat("\nSM total awareness sources excluding Not Aware:\n")
+print(sum(AK$sm_total_awareness_sources, na.rm = TRUE))
+
+cat("\nSM intensity groups:\n")
+print(AK[, .N, by = sm_intensity_group][order(-N)])
+
+cat("\nSM non-compliance pressure:\n")
+print(AK[, .N, by = sm_non_compliance_pressure][order(-N)])
+
+cat("\nSM gap flags:\n")
+print(AK[, .N, by = sm_gap_flag][order(-N)])
+
+cat("\nSM priority flags:\n")
+print(AK[, .N, by = sm_priority_flag][order(-N)])
+
 cat("\nRows where total_main_reasons > missed_child:\n")
 print(
   AK[
     total_main_reasons > missed_child,
-    .(Country, Region, District, Response, roundNumber, missed_child, total_main_reasons)
+    .(
+      Country,
+      Region,
+      District,
+      Response,
+      roundNumber,
+      missed_child,
+      total_main_reasons
+    )
   ][1:20]
 )
 
@@ -546,14 +747,23 @@ cat("\nRows where u5_present is 0 or missing:\n")
 print(
   AK[
     is.na(u5_present) | u5_present == 0,
-    .(Country, Region, District, Response, roundNumber, u5_present, u5_FM, missed_child)
+    .(
+      Country,
+      Region,
+      District,
+      Response,
+      roundNumber,
+      u5_present,
+      u5_FM,
+      missed_child
+    )
   ][1:20]
 )
 
 cat("\n============================================\n")
 
 # ============================================================
-# 10) EXPORT
+# 12) EXPORT
 # ============================================================
 
 cat("\nWriting output...\n")
@@ -563,4 +773,3 @@ fwrite(AK, out_file)
 
 cat("Export completed in:", round(difftime(Sys.time(), t0, units = "secs"), 1), "seconds\n")
 cat("\nNigeria IM repository successfully written to:\n", out_file, "\n")
-
